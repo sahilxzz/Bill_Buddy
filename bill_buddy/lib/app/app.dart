@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
 
-class MyApp extends StatelessWidget {
-    const MyApp({super.key});
+import 'theme.dart';
+import 'router.dart';
+import '../features/auth/auth_state.dart';
 
-    @override
-    Widget build(BuildContext context) {
-        return MaterialApp (
-            home: Scaffold(
-                appBar: AppBar(
-                    title: const Text("Bill Buddy"),
-                    backgroundColor: const Color(0xFFe5d4ef)
-                ),
-                body: const Center(
-                    child: Text("Welcome to Bill Buddy!"),
-                ),
-            ),
+class MyApp extends StatelessWidget {
+  final AuthState authState;
+
+  const MyApp({
+    super.key,
+    required this.authState,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: authState,
+      builder: (context, child) {
+        return MaterialApp.router(
+          title: 'Bill Buddy',
+          theme: AppTheme.lightTheme,
+          routerConfig: createRouter(authState),
         );
-    }
+      },
+    );
+  }
 }
