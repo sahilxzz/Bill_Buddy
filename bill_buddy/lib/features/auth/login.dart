@@ -33,8 +33,11 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
 
     authRepository = AuthRepository(
-      dioClient: DioClient(),
-    );
+      dioClient: DioClient(
+        authState: widget.authState,
+      ),
+      authState: widget.authState,
+    );  
   }
 
   @override
@@ -62,30 +65,11 @@ class _LoginScreenState extends State<LoginScreen> {
     return null;
   }
 
+  // Login only checks that a password was entered.
+  // Password strength rules belong to signup.
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter your password';
-    }
-
-    if (value.length < 8) {
-      return 'Password must be at least 8 characters';
-    }
-
-    if (!RegExp(r'[A-Z]').hasMatch(value)) {
-      return 'Password must contain an uppercase letter';
-    }
-
-    if (!RegExp(r'[a-z]').hasMatch(value)) {
-      return 'Password must contain a lowercase letter';
-    }
-
-    if (!RegExp(r'[0-9]').hasMatch(value)) {
-      return 'Password must contain a number';
-    }
-
-    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>_\-\\/\[\]]')
-        .hasMatch(value)) {
-      return 'Password must contain a special character';
     }
 
     return null;
@@ -165,32 +149,44 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
+
+                // Email
                 TextFormField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     labelText: 'Email',
-                    prefixIcon: const Icon(Icons.email_outlined),
+                    prefixIcon: const Icon(
+                      Icons.email_outlined,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                   validator: _validateEmail,
                 ),
+
                 const SizedBox(height: 16),
+
+                // Password
                 TextFormField(
                   controller: passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    prefixIcon: const Icon(
+                      Icons.lock_outline,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                   validator: _validatePassword,
                 ),
+
                 const SizedBox(height: 24),
+
+                // Login button
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -211,7 +207,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                   ),
                 ),
+
                 const SizedBox(height: 20),
+
+                // Signup navigation
                 Center(
                   child: TextButton(
                     onPressed: isLoading

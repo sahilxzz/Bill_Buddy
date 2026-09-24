@@ -5,13 +5,64 @@ import '../../models/bill.dart';
 import '../../presentation/widgets/bill_card.dart';
 import '../auth/auth_state.dart';
 
-class HomeScreen extends StatelessWidget {
+import '../../core/errors/bank_error.dart';
+import '../../core/network/dio_client.dart';
+import '../../data/repositories/auth_repository.dart';
+
+class HomeScreen extends StatefulWidget {
   final AuthState authState;
 
   const HomeScreen({
     super.key,
     required this.authState,
   });
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late final AuthRepository authRepository;
+
+  @override
+  void initState() {
+    super.initState();
+
+    authRepository = AuthRepository(
+      dioClient: DioClient(
+        authState: widget.authState,
+      ),
+      authState: widget.authState,
+    );
+  }
+
+  Future<void> _testJwt() async {
+    try {
+      final user = await authRepository.getCurrentUser();
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'JWT verified! Hello ${user.name}',
+          ),
+        ),
+      );
+    } on BankError catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.message),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,22 +89,21 @@ class HomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: () {
-              authState.logout();
+              widget.authState.logout();
             },
             icon: const Icon(Icons.logout),
             tooltip: 'Logout',
           ),
         ],
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Hello! 👋',
-              style: TextStyle(
+            Text(
+              'Hello, ${widget.authState.name ?? 'there'} 👋',
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
@@ -126,6 +176,16 @@ class HomeScreen extends StatelessWidget {
                 },
                 icon: const Icon(Icons.add),
                 label: const Text('Add Biller'),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _testJwt,
+                child: const Text('Test JWT'),
               ),
             ),
           ],

@@ -35,7 +35,10 @@ class _SignupScreenState extends State<SignupScreen> {
     super.initState();
 
     authRepository = AuthRepository(
-      dioClient: DioClient(),
+      dioClient: DioClient(
+      authState: widget.authState,
+      ),
+      authState: widget.authState,
     );
   }
 

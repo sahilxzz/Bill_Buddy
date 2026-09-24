@@ -1,12 +1,17 @@
 import 'package:dio/dio.dart';
 
-import '../errors/bank_error.dart';
 import '../../config/api_config.dart';
+import '../../features/auth/auth_state.dart';
+import '../errors/bank_error.dart';
 
 class DioClient {
   late final Dio dio;
 
-  DioClient() {
+  final AuthState authState;
+
+  DioClient({
+    required this.authState,
+  }) {
     dio = Dio(
       BaseOptions(
         baseUrl: ApiConfig.baseUrl,
@@ -21,16 +26,17 @@ class DioClient {
     );
 
     dio.interceptors.add(
-      LogInterceptor(
-        request: true,
-        requestBody: true,
-        responseBody: true,
-        error: true,
-      ),
-    );
-
-    dio.interceptors.add(
       InterceptorsWrapper(
+        onRequest: (options, handler) {
+          final token = authState.token;
+
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+
+          handler.next(options);
+        },
+
         onError: (error, handler) {
           final bankError = _mapError(error);
 
@@ -50,17 +56,35 @@ class DioClient {
 
   BankError _mapError(DioException error) {
     final statusCode = error.response?.statusCode;
+    final responseData = error.response?.data;
+
+    String? serverMessage;
+
+    if (responseData is Map<String, dynamic>) {
+      final message = responseData['message'];
+
+      if (message is String && message.isNotEmpty) {
+        serverMessage = message;
+      }
+    }
+
+    if (serverMessage != null) {
+      return BankError(
+        message: serverMessage,
+        statusCode: statusCode,
+      );
+    }
 
     switch (statusCode) {
       case 400:
         return const BankError(
-          message: 'Bad request',
+          message: 'Invalid request',
           statusCode: 400,
         );
 
       case 401:
         return const BankError(
-          message: 'Unauthorized',
+          message: 'Invalid or expired token',
           statusCode: 401,
         );
 
@@ -84,19 +108,19 @@ class DioClient {
 
       case 409:
         return const BankError(
-          message: 'Conflict',
+          message: 'This already exists',
           statusCode: 409,
         );
 
       case 429:
         return const BankError(
-          message: 'Too many requests',
+          message: 'Too many requests. Please try again later.',
           statusCode: 429,
         );
 
       case 500:
         return const BankError(
-          message: 'Server error',
+          message: 'Something went wrong on the server',
           statusCode: 500,
         );
 
@@ -108,7 +132,7 @@ class DioClient {
 
       case 503:
         return const BankError(
-          message: 'Service unavailable',
+          message: 'Service temporarily unavailable',
           statusCode: 503,
         );
 

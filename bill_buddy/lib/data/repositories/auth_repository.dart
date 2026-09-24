@@ -3,6 +3,8 @@ import 'package:dio/dio.dart';
 import '../../core/errors/bank_error.dart';
 import '../../core/network/dio_client.dart';
 
+import '../../features/auth/auth_state.dart';
+
 class AuthResult {
   final String token;
   final String userId;
@@ -19,9 +21,11 @@ class AuthResult {
 
 class AuthRepository {
   final DioClient dioClient;
+  final AuthState authState;
 
   AuthRepository({
     required this.dioClient,
+    required this.authState,
   });
 
   Future<AuthResult> signup({
@@ -86,6 +90,30 @@ class AuthRepository {
 
       throw BankError(
         message: error.message ?? 'Login failed',
+      );
+    }
+  }
+
+  
+  Future<AuthResult> getCurrentUser() async {
+    try {
+      final response = await dioClient.dio.get('/auth/me');
+
+      final data = response.data;
+
+      return AuthResult(
+        token: authState.token!,
+        userId: data['user']['id'],
+        name: data['user']['name'],
+        email: data['user']['email'],
+      );
+    } on DioException catch (error) {
+      if (error.error is BankError) {
+        throw error.error as BankError;
+      }
+
+      throw BankError(
+        message: error.message ?? 'Failed to get user',
       );
     }
   }
