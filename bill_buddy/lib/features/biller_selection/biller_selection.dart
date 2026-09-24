@@ -1,21 +1,116 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class BillerSelectionScreen extends StatelessWidget {
+import '../../core/errors/bank_error.dart';
+import '../../core/network/dio_client.dart';
+import '../../data/repositories/biller_repository.dart';
+import '../../features/auth/auth_state.dart';
+import '../../models/biller.dart';
+
+class BillerSelectionScreen extends StatefulWidget {
   final String category;
+  final AuthState authState;
 
   const BillerSelectionScreen({
     super.key,
     required this.category,
+    required this.authState,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final billers = _getBillers(category);
+  State<BillerSelectionScreen> createState() =>
+      _BillerSelectionScreenState();
+}
 
+class _BillerSelectionScreenState
+    extends State<BillerSelectionScreen> {
+  late final BillerRepository billerRepository;
+
+  List<Biller> billers = [];
+  List<Biller> filteredBillers = [];
+
+  bool isLoading = true;
+  String? errorMessage;
+
+  final TextEditingController searchController =
+      TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+
+    billerRepository = BillerRepository(
+      dioClient: DioClient(
+        authState: widget.authState,
+      ),
+    );
+
+    _loadBillers();
+
+    searchController.addListener(_filterBillers);
+  }
+
+  Future<void> _loadBillers() async {
+    try {
+      final backendCategory =
+          widget.category.toLowerCase().replaceAll(' ', '_');
+
+      final result = await billerRepository.getBillers(
+        category: backendCategory,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        billers = result;
+        filteredBillers = result;
+        isLoading = false;
+      });
+    } on BankError catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        errorMessage = error.message;
+        isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        errorMessage = 'Failed to load billers';
+        isLoading = false;
+      });
+    }
+  }
+
+  void _filterBillers() {
+    final query = searchController.text.trim().toLowerCase();
+
+    setState(() {
+      if (query.isEmpty) {
+        filteredBillers = billers;
+      } else {
+        filteredBillers = billers
+            .where(
+              (biller) =>
+                  biller.name.toLowerCase().contains(query),
+            )
+            .toList();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(category),
+        title: Text(widget.category),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -43,6 +138,7 @@ class BillerSelectionScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             TextField(
+              controller: searchController,
               decoration: InputDecoration(
                 hintText: 'Search biller',
                 prefixIcon: const Icon(Icons.search),
@@ -68,27 +164,7 @@ class BillerSelectionScreen extends StatelessWidget {
             const SizedBox(height: 12),
 
             Expanded(
-              child: ListView.separated(
-                itemCount: billers.length,
-                separatorBuilder: (context, index) {
-                  return const SizedBox(height: 10);
-                },
-                itemBuilder: (context, index) {
-                  final biller = billers[index];
-
-                  return _BillerTile(
-                    name: biller['name']!,
-                    description: biller['description']!,
-                    onTap: () {
-                      context.push(
-                        '/biller-form'
-                        '?category=${Uri.encodeComponent(category)}'
-                        '&biller=${Uri.encodeComponent(biller['name']!)}',
-                      );
-                    },
-                  );
-                },
-              ),
+              child: _buildBillerList(),
             ),
           ],
         ),
@@ -96,103 +172,105 @@ class BillerSelectionScreen extends StatelessWidget {
     );
   }
 
-  List<Map<String, String>> _getBillers(String category) {
-    switch (category) {
-      case 'Electricity':
-        return [
-          {
-            'name': 'BESCOM',
-            'description':
-                'Bangalore Electricity Supply Company',
-          },
-          {
-            'name': 'Tata Power',
-            'description': 'Electricity bill payment',
-          },
-          {
-            'name': 'Adani Electricity',
-            'description': 'Electricity bill payment',
-          },
-        ];
+  Widget _buildBillerList() {
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
 
-      case 'Water':
-        return [
-          {
-            'name': 'Bangalore Water Supply',
-            'description': 'Water bill payment',
-          },
-          {
-            'name': 'Delhi Jal Board',
-            'description': 'Water bill payment',
-          },
-        ];
+    if (errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 48,
+            ),
 
-      case 'Gas':
-        return [
-          {
-            'name': 'Indraprastha Gas',
-            'description': 'Piped gas bill payment',
-          },
-          {
-            'name': 'Mahanagar Gas',
-            'description': 'Piped gas bill payment',
-          },
-        ];
+            const SizedBox(height: 12),
 
-      case 'Broadband':
-        return [
-          {
-            'name': 'Airtel Xstream Fiber',
-            'description': 'Broadband bill payment',
-          },
-          {
-            'name': 'JioFiber',
-            'description': 'Broadband bill payment',
-          },
-        ];
+            Text(
+              errorMessage!,
+              textAlign: TextAlign.center,
+            ),
 
-      case 'Mobile':
-        return [
-          {
-            'name': 'Airtel',
-            'description': 'Mobile postpaid bill',
-          },
-          {
-            'name': 'Jio',
-            'description': 'Mobile postpaid bill',
-          },
-          {
-            'name': 'Vi',
-            'description': 'Mobile postpaid bill',
-          },
-        ];
+            const SizedBox(height: 16),
 
-      case 'DTH':
-        return [
-          {
-            'name': 'Tata Play',
-            'description': 'DTH bill payment',
-          },
-          {
-            'name': 'Airtel Digital TV',
-            'description': 'DTH bill payment',
-          },
-        ];
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  isLoading = true;
+                  errorMessage = null;
+                });
 
-      case 'Credit Card':
-        return [
-          {
-            'name': 'ICICI Bank',
-            'description': 'Credit card bill payment',
+                _loadBillers();
+              },
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (filteredBillers.isEmpty) {
+      return const Center(
+        child: Text(
+          'No billers found',
+          style: TextStyle(fontSize: 16),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      itemCount: filteredBillers.length,
+      separatorBuilder: (context, index) {
+        return const SizedBox(height: 10);
+      },
+      itemBuilder: (context, index) {
+        final biller = filteredBillers[index];
+
+        return _BillerTile(
+          name: biller.name,
+          description: _getDescription(biller),
+          onTap: () {
+            context.push(
+              '/biller-form'
+              '?category=${Uri.encodeComponent(widget.category)}'
+              '&biller=${Uri.encodeComponent(biller.name)}',
+            );
           },
-          {
-            'name': 'HDFC Bank',
-            'description': 'Credit card bill payment',
-          },
-        ];
+        );
+      },
+    );
+  }
+
+  String _getDescription(Biller biller) {
+    switch (biller.category) {
+      case 'electricity':
+        return 'Electricity bill payment';
+
+      case 'water':
+        return 'Water bill payment';
+
+      case 'gas':
+        return 'Gas bill payment';
+
+      case 'broadband':
+        return 'Broadband bill payment';
+
+      case 'mobile':
+        return 'Mobile bill payment';
+
+      case 'dth':
+        return 'DTH bill payment';
+
+      case 'credit_card':
+        return 'Credit card bill payment';
 
       default:
-        return [];
+        return 'Bill payment';
     }
   }
 }

@@ -9,6 +9,11 @@ import '../features/auth/auth_state.dart';
 import '../features/auth/login.dart';
 import '../features/auth/signup.dart';
 
+import '../features/payment/payment_review.dart';
+import '../features/payment/payment_success.dart';
+import '../models/bill.dart';
+import '../models/payment.dart';
+
 GoRouter createRouter(AuthState authState) {
   return GoRouter(
     initialLocation: '/login',
@@ -79,6 +84,7 @@ GoRouter createRouter(AuthState authState) {
 
           return BillerSelectionScreen(
             category: category,
+            authState: authState,
           );
         },
       ),
@@ -95,6 +101,30 @@ GoRouter createRouter(AuthState authState) {
           return BillerFormScreen(
             category: category,
             biller: biller,
+            authState: authState,
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/payment-review',
+        builder: (context, state) {
+          final bill = state.extra as Bill;
+
+          return PaymentReviewScreen(
+            bill: bill,
+            authState: authState,
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/payment-success',
+        builder: (context, state) {
+          final payment = state.extra as Payment;
+
+          return PaymentSuccessScreen(
+            payment: payment,
           );
         },
       ),

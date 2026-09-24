@@ -5,6 +5,10 @@ const cors = require('cors');
 
 const connectDatabase = require('./config/database');
 const authRoutes = require('./routes/auth');
+const billerRoutes = require('./routes/billers');
+const userBillerRoutes = require('./routes/userBillers');
+const billRoutes = require('./routes/bills');
+const paymentRoutes = require('./routes/payment');
 
 const app = express();
 
@@ -21,6 +25,10 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/billers', billerRoutes);
+app.use('/api/user-billers', userBillerRoutes);
+app.use('/api/bills', billRoutes);
+app.use('/api/payments', paymentRoutes);
 
 const startServer = async () => {
   await connectDatabase();
