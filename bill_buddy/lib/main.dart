@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
-import '/app/app.dart';
+
+import 'app/app.dart';
+import 'features/auth/auth_state.dart';
 
 void main() {
-  runApp(const MyApp());
+  final authState = AuthState();
+
+  runApp(
+    MyApp(
+      authState: authState,
+    ),
+  );
 }
-
-
 
 
 
